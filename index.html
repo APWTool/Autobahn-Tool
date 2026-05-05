@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autobahn Tool Pro Max</title>
+
+    <!-- Analytics -->
+    <script data-goatcounter="https://apwpatrick.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
+    <!-- PWA & Icons -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007BFF">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Styles & Map -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Scripts -->
+    <script src="turf.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="wachenData.js"></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+
+<!-- MAP OVERLAY -->
+<div id="map-overlay">
+    <div class="map-header">
+        <h3>📝 Netzknoten erfassen</h3>
+        <button id="btn-schliesse-karte">Zurück</button>
+    </div>
+    <div id="map-container">
+        <div id="karte"></div>
+        <div class="center-pin">📍</div>
+    </div>
+    <div class="map-footer">
+        <p style="margin: 0 0 10px 0; font-size: 0.9em; text-align: center;">Bewege die Karte exakt unter die Nadelspitze.</p>
+        <button id="btn-berechne-karten-knoten">Hier erfassen</button>
+        <div id="nk-map-result"></div>
+    </div>
+</div>
+
+<!-- HAUPTSEITE -->
+<div class="card" id="page-main">
+    <div class="theme-switch" id="btn-theme-switch">🌓</div>
+    <h2>Zuständigkeitsfinder</h2>
+    
+    <div class="wache-buttons" id="wache-container">
+        <button class="wache-btn" data-wache="Hilden">Hilden</button>
+        <button class="wache-btn" data-wache="Mülheim">Mülheim</button>
+        <button class="wache-btn" data-wache="Hünxe">Hünxe</button>
+        <button class="wache-btn" data-wache="Moers">Moers</button>
+        <button class="wache-btn" data-wache="Gladbach">Gladbach</button>
+    </div>
+    
+    <select id="autobahn"></select>
+    <input id="km" placeholder="Kilometer manuell eingeben (z.B. 114.5)" inputmode="decimal">
+
+    <button id="gpsBtn">📡 GPS Live-Erfassung starten</button>
+    <div id="gps-info">Lade NRW Geodaten... Bitte warten.</div>
+
+    <button class="btn-action" id="btn-oeffne-karte">📝 NK auf Karte erfassen</button>
+    <button class="btn-action" id="btn-oeffne-wzt">⏱️ Weg-Zeit Live Tracker</button>
+
+    <div class="result">
+        <p><strong>Bereich:</strong> <span id="bereich">-</span></p>
+        <p><strong>Gemeinde:</strong> <span id="gemeinde">-</span></p>
+        <p><strong>Meisterei:</strong> <span id="meisterei">-</span></p>
+        <p><strong>Adresse:</strong> <span id="meisterei_adresse">-</span></p>
+        <div class="bar"><div id="progress" class="fill"></div></div>
+    </div>
+
+    <div class="table-container">
+        <div id="dir-plus" class="direction-arrow"><span class="dir-text" id="dir-plus-text"></span><span class="arrow-icon">⬇</span></div>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Typ</th><th>Anschlussstelle</th><th>Km</th></tr></thead>
+                <tbody id="liste"></tbody>
+            </table>
+        </div>
+        <div id="dir-minus" class="direction-arrow"><span class="arrow-icon">⬆</span><span class="dir-text" id="dir-minus-text"></span></div>
+    </div>
+
+    <div style="text-align:center; font-size: 0.85em; margin-top: 15px;">
+        <label><input type="checkbox" id="saveWache"> Ausgewählte Wache als Standard speichern</label>
+    </div>
+</div>
+
+<!-- WEG-ZEIT-TRACKER (Standardmäßig ausgeblendet) -->
+<div class="card" id="page-wegzeit" style="display: none;">
+    <button class="btn-action" id="btn-schliesse-wzt" style="margin-bottom: 15px;">⬅ Zurück zur Hauptseite</button>
+    <h2>Weg-Zeit Tracker</h2>
+    
+    <div class="result">
+        <p><strong>Status:</strong> <span id="wzt-status">Bereit</span></p>
+        <p><strong>Ø Geschwindigkeit:</strong> <span id="wzt-speed">0</span> km/h</p>
+        <p><strong>Aktueller KM:</strong> <span id="wzt-km">-</span></p>
+    </div>
+
+    <button id="btn-wzt-start" style="background: #28a745;">▶ Tracker Starten</button>
+    <button id="btn-wzt-stop" style="background: #dc3545; display: none;">⏹ Tracker Stoppen</button>
+
+    <table style="margin-top: 15px;">
+        <thead><tr><th>Zeit</th><th>Km</th><th>Strecke</th></tr></thead>
+        <tbody id="wzt-liste"></tbody>
+    </table>
+</div>
+
+</body>
+</html>
