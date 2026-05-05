@@ -1,35 +1,33 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autobahn Tool Pro Max</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autobahn Tool</title>
 
-    <!-- Analytics -->
-    <script data-goatcounter="https://apwpatrick.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<!-- GoatCounter Analytics -->
+<script data-goatcounter="https://apwpatrick.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 
-    <!-- PWA & Icons -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007BFF">
-    <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007BFF">
+<link rel="apple-touch-icon" href="icon-192.png.png">
 
-    <!-- Styles & Map -->
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- CSS laden -->
+<link rel="stylesheet" href="style.css">
 
-    <!-- Scripts -->
-    <script src="turf.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="wachenData.js"></script>
-    <script src="app.js" defer></script>
+<script src="turf.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- JS laden (defer sorgt dafür, dass es nach dem HTML geladen wird) -->
+<script src="app.js" defer></script>
 </head>
 <body>
 
-<!-- MAP OVERLAY -->
 <div id="map-overlay">
     <div class="map-header">
         <h3>📝 Netzknoten erfassen</h3>
-        <button id="btn-schliesse-karte">Zurück</button>
+        <button onclick="closeMap()">Zurück</button>
     </div>
     <div id="map-container">
         <div id="karte"></div>
@@ -37,38 +35,38 @@
     </div>
     <div class="map-footer">
         <p style="margin: 0 0 10px 0; font-size: 0.9em; text-align: center;">Bewege die Karte exakt unter die Nadelspitze.</p>
-        <button id="btn-berechne-karten-knoten">Hier erfassen</button>
+        <button onclick="calculateNKMap()">Hier erfassen</button>
         <div id="nk-map-result"></div>
     </div>
 </div>
 
 <!-- HAUPTSEITE -->
 <div class="card" id="page-main">
-    <div class="theme-switch" id="btn-theme-switch">🌓</div>
+    <div class="theme-switch" onclick="toggleTheme()">🌓</div>
     <h2>Zuständigkeitsfinder</h2>
     
     <div class="wache-buttons" id="wache-container">
-        <button class="wache-btn" data-wache="Hilden">Hilden</button>
-        <button class="wache-btn" data-wache="Mülheim">Mülheim</button>
-        <button class="wache-btn" data-wache="Hünxe">Hünxe</button>
-        <button class="wache-btn" data-wache="Moers">Moers</button>
-        <button class="wache-btn" data-wache="Gladbach">Gladbach</button>
+        <button class="wache-btn" data-wache="Hilden" onclick="wechsleWache('Hilden', true)">Hilden</button>
+        <button class="wache-btn" data-wache="Mülheim" onclick="wechsleWache('Mülheim', true)">Mülheim</button>
+        <button class="wache-btn" data-wache="Hünxe" onclick="wechsleWache('Hünxe', true)">Hünxe</button>
+        <button class="wache-btn" data-wache="Moers" onclick="wechsleWache('Moers', true)">Moers</button>
+        <button class="wache-btn" data-wache="Gladbach" onclick="wechsleWache('Gladbach', true)">Gladbach</button>
     </div>
     
-    <select id="autobahn"></select>
-    <input id="km" placeholder="Kilometer manuell eingeben (z.B. 114.5)" inputmode="decimal">
+    <select id="autobahn" onchange="manuellerFokus = this.value; updateUI(); updateRichtung(); berechnen(true);"></select>
+    <input id="km" placeholder="Kilometer manuell eingeben" inputmode="decimal" oninput="berechnen(true)">
 
-    <button id="gpsBtn">📡 GPS Live-Erfassung starten</button>
+    <button id="gpsBtn" onclick="toggleGPS()">📡 GPS Live-Erfassung starten</button>
     <div id="gps-info">Lade NRW Geodaten... Bitte warten.</div>
 
-    <button class="btn-action" id="btn-oeffne-karte">📝 NK auf Karte erfassen</button>
-    <button class="btn-action" id="btn-oeffne-wzt">⏱️ Weg-Zeit Live Tracker</button>
+    <button class="btn-action" onclick="openMap()">📝 NK auf Karte erfassen</button>
+    <button class="btn-action" onclick="showPage('page-wegzeit')">⏱️ Weg-Zeit Live Tracker</button>
 
     <div class="result">
-        <p><strong>Bereich:</strong> <span id="bereich">-</span></p>
-        <p><strong>Gemeinde:</strong> <span id="gemeinde">-</span></p>
-        <p><strong>Meisterei:</strong> <span id="meisterei">-</span></p>
-        <p><strong>Adresse:</strong> <span id="meisterei_adresse">-</span></p>
+        <p><strong>Bereich:</strong> <span id="b">-</span></p>
+        <p><strong>Gemeinde:</strong> <span id="g">-</span></p>
+        <p><strong>Meisterei:</strong> <span id="m">-</span></p>
+        <p><strong>Adresse:</strong> <span id="m_address">-</span></p>
         <div class="bar"><div id="progress" class="fill"></div></div>
     </div>
 
@@ -84,28 +82,93 @@
     </div>
 
     <div style="text-align:center; font-size: 0.85em; margin-top: 15px;">
-        <label><input type="checkbox" id="saveWache"> Ausgewählte Wache als Standard speichern</label>
+        <label><input type="checkbox" id="saveWache" onchange="saveWacheSetting()"> Ausgewählte Wache als Standard speichern</label>
     </div>
 </div>
 
-<!-- WEG-ZEIT-TRACKER (Standardmäßig ausgeblendet) -->
-<div class="card" id="page-wegzeit" style="display: none;">
-    <button class="btn-action" id="btn-schliesse-wzt" style="margin-bottom: 15px;">⬅ Zurück zur Hauptseite</button>
-    <h2>Weg-Zeit Tracker</h2>
+<!-- WEG-ZEIT RECHNER SEITE -->
+<div class="card" id="page-wegzeit" style="display:none;">
+    <h2>Live Weg-Zeit Tracker</h2>
     
-    <div class="result">
-        <p><strong>Status:</strong> <span id="wzt-status">Bereit</span></p>
-        <p><strong>Ø Geschwindigkeit:</strong> <span id="wzt-speed">0</span> km/h</p>
-        <p><strong>Aktueller KM:</strong> <span id="wzt-km">-</span></p>
+    <div class="wache-buttons">
+        <button class="wache-btn" data-wache="Hilden" onclick="wechsleWache('Hilden', true)">Hilden</button>
+        <button class="wache-btn" data-wache="Mülheim" onclick="wechsleWache('Mülheim', true)">Mülheim</button>
+        <button class="wache-btn" data-wache="Hünxe" onclick="wechsleWache('Hünxe', true)">Hünxe</button>
+        <button class="wache-btn" data-wache="Moers" onclick="wechsleWache('Moers', true)">Moers</button>
+        <button class="wache-btn" data-wache="Gladbach" onclick="wechsleWache('Gladbach', true)">Gladbach</button>
     </div>
 
-    <button id="btn-wzt-start" style="background: #28a745;">▶ Tracker Starten</button>
-    <button id="btn-wzt-stop" style="background: #dc3545; display: none;">⏹ Tracker Stoppen</button>
+    <select id="wz_autobahn" onchange="updateWzUI()"></select>
+    <select id="wz_richtung"></select>
+    <input id="start_km" placeholder="Letzter bekannter KM" inputmode="decimal">
+    
+    <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--input-border); border-radius: 6px; background: var(--bg-body); font-size: 0.9em;">
+        <label style="display:block; margin-bottom: 8px; font-weight:bold;">Geschwindigkeit:</label>
+        <label style="display:inline-block; margin-right: 15px; cursor:pointer;"><input type="radio" name="speed_mode" value="manual" checked onchange="toggleSpeedMode()"> Manuell</label>
+        <label style="display:inline-block; cursor:pointer;"><input type="radio" name="speed_mode" value="live" onchange="toggleSpeedMode()"> Live Traffic (Maps)</label>
+        <input id="speed" placeholder="Eingabe in km/h" inputmode="numeric" style="margin-top: 8px;">
+    </div>
+    
+    <button class="btn-secondary" id="btn_wz_start" onclick="startWegZeit()">▶ Start Tracking</button>
+    <button class="btn-action" id="btn_wz_stop" onclick="stopWegZeit()" style="display:none; background:#dc3545;">⏹ Stop Tracking</button>
 
-    <table style="margin-top: 15px;">
-        <thead><tr><th>Zeit</th><th>Km</th><th>Strecke</th></tr></thead>
-        <tbody id="wzt-liste"></tbody>
-    </table>
+    <div class="result" id="wz_result_box" style="display:none; border-left-color: #dc3545;">
+        <p><strong>Aktueller Fahrzeug-KM:</strong> <span id="wz_aktuell_km" style="font-size:1.2em; color:#dc3545; font-weight:bold;">-</span></p>
+        <p><strong>Verstrichene Zeit:</strong> <span id="wz_zeit">0:00</span> min</p>
+    </div>
+
+    <div class="table-container">
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Typ</th><th>Anschlussstelle</th><th>Km</th></tr></thead>
+                <tbody id="wz_liste"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <button class="btn-action" onclick="showPage('page-main')">Zurück zur Hauptseite</button>
+</div>
+
+<!-- IMPRESSUM SEITE -->
+<div class="card" id="page-impressum" style="display:none;">
+    <h2>Impressum</h2>
+    <div class="info-text" style="font-size: 0.9em; line-height: 1.5;">
+        <p><strong>Angaben gemäß Digitale-Dienste-Gesetz (DDG):</strong><br>
+        Patrick Stahlberg, PK<br>
+        PP Düsseldorf<br>
+        Dir.V VI3 APW Hilden<br>
+        Zum Forsthaus 16, 40724 Hilden<br>
+        <a href="mailto:patrick.stahlberg@polizei.nrw.de">patrick.stahlberg@polizei.nrw.de</a></p>
+        
+        <p><strong>Datenschutzhinweis:</strong><br>
+        Diese Applikation nutzt die GPS-Funktion des Endgerätes ausschließlich zur lokalen Berechnung von Straßenparametern. Es werden grundlegende, vollständig anonymisierte Aufrufstatistiken über GoatCounter (ohne Einsatz von Cookies) erhoben. Personenbezogene Daten, Bewegungsprofile oder IP-Adressen werden von dieser App nicht erfasst oder gespeichert.</p>
+    </div>
+    <button class="btn-action" onclick="showPage('page-main')">Zurück</button>
+</div>
+
+<!-- HINWEISE & QUELLEN SEITE -->
+<div class="card" id="page-hinweise" style="display:none;">
+    <h2>Hinweise & Quellen</h2>
+    <div class="info-text" style="font-size: 0.9em; line-height: 1.5;">
+        <p><strong>Haftungsausschluss:</strong><br>
+        Alle in dieser Anwendung berechneten Angaben erfolgen ohne Gewähr. Die ermittelten Netzknoten, Betriebskilometer und Zuständigkeiten dienen ausschließlich der schnellen dienstlichen Orientierung.</p>
+        
+        <p><strong>Quellenverzeichnis & Lizenzen:</strong></p>
+        <ul>
+            <li><strong>Grenzübergänge, Kilometrierung BAB:</strong> Eigenrecherche <a href="https://www.bkg.bund.de" target="_blank">BKG</a>; © Bundesamt für Kartographie und Geodäsie. <br> © <a href="https://www.bkg.bund.de" target="_blank">BKG</a> (2024) <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank">dl-de/by-2-0</a>, Datenquellen: <a href="https://sgx.geodatenzentrum.de/web_public/gdz/datenquellen/datenquellen_poi-open.pdf" target="_blank">Link (PDF)</a>.</li>
+            <li><strong>Straßennetz & Kilometerdaten (NWSIB):</strong> © Landesbetrieb Straßenbau Nordrhein-Westfalen (Straßen.NRW), bereitgestellt über das Portal Open.NRW. Genutzt unter der <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank">Datenlizenz Deutschland – Namensnennung – Version 2.0 (dl-de/by-2-0)</a>.</li>
+            <li><strong>Verwaltungsgrenzen (Gemeinden):</strong> © Geobasis NRW. Genutzt unter der <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank">Datenlizenz Deutschland – Namensnennung – Version 2.0 (dl-de/by-2-0)</a>.</li>
+            <li><strong>Kartenmaterial (Straßen):</strong> © OpenStreetMap-Mitwirkende (ODbL).</li>
+            <li><strong>Kartenmaterial (Satellit):</strong> © Esri, Maxar, Earthstar Geographics, und die GIS-User-Community.</li>
+            <li><strong>Technologie:</strong> Diese Anwendung nutzt die Open-Source-Bibliotheken Turf.js (MIT-Lizenz) und Leaflet.js (BSD-Lizenz).</li>
+        </ul>
+    </div>
+    <button class="btn-action" onclick="showPage('page-main')">Zurück</button>
+</div>
+
+<div class="footer-nav" id="footer-nav">
+    <a onclick="showPage('page-impressum')">Impressum</a>
+    <a onclick="showPage('page-hinweise')">Quellen & Hinweise</a>
 </div>
 
 </body>
