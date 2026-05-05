@@ -1,355 +1,751 @@
-// --- ZUSTANDSVERWALTUNG (State Management) ---
-const zustand = {
-    aktuelleWache: "Hilden",
-    aktuelleAutobahn: "",
-    aktuellerKilometer: NaN,
-    gpsAktiv: false,
-    letzteGpsZeit: 0,
-    koordinaten: { lat: 0, lng: 0 },
-    wegZeit: { aktiv: false, startZeit: 0, startKm: 0, messpunkte: [] }
+// Service Worker Registrierung
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('Service Worker registriert!');
+    }).catch(err => console.log('SW Fehler:', err));
+  });
+}
+
+// --- DATENBANK ---
+const datenWachen = {
+    "Hilden": { grenzen: {"A1": [363.315, 381.658], "A3": [101.200, 122.819], "A44": [1.215, 17.599], "A46": [70.815, 114.763], "A57": [88.500, 100.902], "A59": [0.578, 14.467], "A535": [0.262, 12.811], "A542": [4.055, 8.754], "L418": [0, 10]}, listen: {"A1": [["AS","Wuppertal-Langerfeld","365,700"], ["PP","Kucksiepen","367,900", "RF DO"], ["PP","Ehrenberg","368,200", "RF Köln"], ["AS","Wuppertal-Ronsdorf","373,000"], ["AS","Remscheid-Lennep","376,800"], ["AS","Remscheid","379,100"]], "A3": [["PP","Stindertal","103,400", "RF Köln"], ["PP","Stinderhof","103,400", "RF OB"], ["AK","Hilden","108,700"], ["TuR","Ohligser Heide","113,100"], ["AS","Solingen","117,400"], ["AK","Langenfeld","118,400"], ["PP","Reusrather Heide","121,600"]], "A44": [["AS","Hetterscheidt","1,200"], ["AS","Heiligenhaus","6,000"], ["AS","Velbert-Nord","8,400"], ["AD","Velbert-Nord","9,500"], ["AS","Langenberg","11,900"], ["AS","Essen-Kupferdreh","14,100", "Dilldorfer Höhe"], ["AS","Essen-Kupferdreh","14,700"], ["AS","Essen-Überruhr","16,800"], ["AS","Essen-Heisingen","17,600", "Übergang B 227"]], "A46": [["AK","Neuss-Süd","70,800"], ["AS","Neuss-Uedesheim","72,300"], ["AS","Düsseldorf-Bilk","76,300"], ["AS","Düsseldorf-Zentrum","78,000"], ["AS","Düsseldorf-Wersten","78,200"], ["AS","Düsseldorf-Holthausen","80,000"], ["AS","Düsseldorf-Eller","81,200"], ["AK","Düsseldorf-Süd","82,000"], ["AS","Erkrath","85,000"], ["AK","Hilden","87,000"], ["AS","Hilden","87,400"], ["AS","Haan-West","89,400"], ["PP","Höfgen","92,600", "RF Brilon"], ["PP","Stropmütze","92,600", "RF Heinsberg"], ["AS","Haan-Ost","94,200"], ["AS","Wuppertal-Cronenberg","98,400", "Abzweig L 418"], ["AK","Sonnborner Kreuz","99,500"], ["AS","Wuppertal-Varresbeck","101,600"], ["AS","Wuppertal-Katernberg","103,900"], ["AS","Wuppertal-Elberfeld","105,700"], ["AS","Wuppertal-Barmen","107,800"], ["AS","Wuppertal-Wichlinghausen","110,000"], ["TuR","Sternenberg","110,900"], ["PP","Holtkamp-Nord","112,700", "RF Heinsberg"], ["AS","Wuppertal-Oberbarmen","113,900"], ["AK","Wuppertal-Nord","114,600"]], "A57": [["AK","Neuss-Süd","90,300"], ["RuT","Nievenheim","94,900"], ["AS","Dormagen","98,300", "RF Nijmegen"], ["AS","Dormagen","99,400", "RF Köln"]], "A59": [["AK","Düsseldorf-Süd","0,000"], ["AS","Düsseldorf-Benrath","1,800"], ["AS","Düsseldorf-Garath","4,600"], ["PP","Wolfhagen","8,000", "RF Dinslaken"], ["AS","Richrath","9,000"], ["PP","Berghausen","9,900", "RF Köln"], ["AS","Monheim","11,400"], ["AK","Monheim-Süd","13,100"]], "A535": [["AD","Velbert-Nord","0,262"], ["AS","Velbert","1,800"], ["AS","Tönisheide","4,500"], ["AS","Wülfrath","6,600"], ["AS","Wuppertal-Dornap","11,700"]], "A542": [["AS","Leverkusen-Hitdorf","3,400"], ["AK","Monheim-Süd","3,500"], ["AS","Langenfeld-Reusrath","5,700"], ["AS","Langenfeld-Immigrath","8,000"], ["AK","Langenfeld","8,800"]], "L418": [["AS", "Cronenberg/Küllenhahn/MVA", "-"], ["AS", "Zentrum/W-Elberfeld", "-"], ["AS", "Universität", "-"]] }, richtungen: {"A1": ["RF Köln (+)","RF Dortmund (-)"], "A3": ["RF Köln (+)","RF Arnheim (-)"], "A44": ["RF Kassel (+)","RF Mönchengladbach (-)"], "A46": ["RF Brilon (+)","RF Heinsberg (-)"], "A57": ["RF Köln (+)","RF Goch (-)"], "A59": ["RF Köln (+)","RF Dinslaken (-)"], "A535": ["RF Wuppertal (+)","RF Velbert (-)"], "A542": ["RF Langenfeld (+)","RF Monheim (-)"], "L418": ["RF Wuppertal (+)","RF Cronenberg (-)"]} },
+    "Mülheim": { grenzen: {"A3": [76.000, 101.199], "A40": [42.000, 67.569], "A44": [84.114, 104.754], "A52": [54.000, 82.708], "A59": [22.500, 25.126], "A524": [7.662, 14.933]}, listen: {"A3": [["AK","Kaiserberg","77,000"], ["AS","Duisburg-Wedau","81,600"], ["PP","Stockweg","86,800","RF Oberhausen"], ["PP","Entenfang","86,800","RF Köln"], ["AK","Breitscheid","89,700"], ["RuT","Hösel","93,100","RF Oberhausen"], ["AK","Ratingen-Ost","96,500"], ["AS","Mettmann","101,000"]], "A40": [["AK","Kaiserberg","42,600"], ["AS","Duisburg-Kaiserberg","43,600"], ["AS","Mülheim","46,200","Ausf. RF DO, Zuf. RF Venlo"], ["AS","Mülheim-Styrum","47,500"], ["AS","Mülheim-Dümpten","49,700"], ["AS","Mülheim-Winkhausen","51,800"], ["AS","MH-Heißen","53,800","Ausf. RF DO, Zuf. RF Venlo"], ["AS","MH-Heißen","54,200","Zuf. RF DO, Ausf. RF Venlo"], ["AS","Mülheim-Heimaterde","55,100"], ["AS","Essen-Frohnhausen","56,600"], ["AS","Essen-Holsterhausen","57,800"], ["AS","Essen Zentrum","59,000"], ["AS","Essen-Zentrum-Ost","59,800","RF Dortmund"], ["AS","Essen-Huttrop","60,900"], ["AD","Essen-Ost","61,800"], ["AS","Essen-Frillendorf (alt)","62,700"], ["AS","Essen-Frillendorf (neu)","63,800"], ["AS","Essen-Kray","64,900"], ["AS","Gelsenkirchen-Süd","66,800"]], "A44": [["AS","Lank-Latum","84,600"], ["AS","Düsseldorf-Messe","90,200"], ["AS","Düsseldorf-Stockum","91,600"], ["AS","Düsseldorf-Flughafen","93,700"], ["AK","Düsseldorf-Nord","96,800"], ["AS","D'dorf-Reichswaldallee","99,900","Zufahrt RF Kassel"], ["AS","Ratingen-Schwarzbach","102,500"], ["AS","Ratingen-Ost","104,100"], ["AK","Ratingen-Ost","104,700","Ausbauende / A3"]], "A52": [["AS","Düsseldorf-Rath","55,400"], ["AK","Düsseldorf-Nord","56,800"], ["T","Hohenstein","57,200","RF Essen"], ["AS","Ratingen","58,500","58,3 RF Essen; 58,7 RF D'dorf"], ["PP","Tiefenbroich","59,400","RF Essen"], ["AS","Tiefenbroich","61,400"], ["AD","Breitscheid","64,400"], ["AK","Breitscheid","65,000"], ["AS","Breitscheid","65,700"], ["PP","Auberg","68,400","RF Essen"], ["PP","Ickten","70,800","RF Düsseldorf"], ["AS","Essen-Kettwig","73,900"], ["AS","Essen-Haarzopf","76,100"], ["AS","Essen-Rüttenscheid","77,200","Zuf. RF D'dorf, Ausf. RF Essen"], ["AS","Essen-Rüttenscheid","78,200"], ["AS","Essen-Süd","80,300"], ["AS","Essen-Bergerhausen","81,600"], ["AD","Essen-Ost","83,000"]], "A59": [["AK","Duisburg-Süd","24,600"]], "A524": [["AK","Duisburg-Süd","8,200"], ["AS","Duisburg-Rahm","10,000"], ["AS","Lintorf","12,600"], ["AD","Breitscheid","14,900"]]}, richtungen: {"A3": ["RF Köln (+)","RF Arnheim (-)"], "A40": ["RF Dortmund (+)","RF Venlo (-)"], "A44": ["RF Kassel (+)","RF Mönchengladbach (-)"], "A52": ["RF Essen (+)","RF Roermond (-)"], "A59": ["RF Köln (+)","RF Dinslaken (-)"], "A524": ["RF Breitscheid (+)","RF Krefeld (-)"]} },
+    "Hünxe": { grenzen: {"A2": [469.919, 473.050], "A3": [0.000, 75.999], "A42": [9.500, 34.186], "A59": [1.306, 12.999], "A516": [0.000, 5.073]}, listen: {"A2": [["AS","Oberhausen-Königshardt","470,600"], ["AK","Oberhausen","473,000"]], "A3": [["GÜ","Grenzübergang Elten","0,000"], ["R","Elten","0,600","RF Oberhausen"], ["AS","Elten","2,100"], ["PP","Hohe Heide","3,700","RF Oberhausen"], ["AS","Emmerich","7,300"], ["AS","Emmerich-Ost","11,300"], ["PP","Löwenberger Landwehr","12,300","RF Oberhausen"], ["PP","Hetter","14,800","RF Arnheim"], ["PP","Millingen","17,900","RF Oberhausen"], ["PP","Kälberweide","21,100","RF Arnheim"], ["AS","Rees","22,200"], ["PP","Kattenhorst","23,900","RF Oberhausen"], ["PP","Helderloh","28,400","RF Arnheim"], ["PP","Wittenhorst","29,000","RF Oberhausen"], ["PP","Elsholt","32,100","RF Oberhausen"], ["PP","Lichtholz","33,600","RF Arnheim"], ["AS","Hamminkeln","35,400"], ["PP","Kranekamp","38,900","RF Oberhausen"], ["PP","Wispelt","41,700","RF Arnheim"], ["PP","Esselt","47,400","RF Arnheim"], ["PP","Loher Feld","47,400","RF Oberhausen"], ["AS","Wesel","48,800"], ["AS","Hünxe","52,100"], ["RuT","Hünxe","52,900","RF Arnheim"], ["RuT","Hünxe","52,900","RF Köln"], ["PP","Bergschlag","56,600","RF Arnheim"], ["AS","Dinslaken-Nord","58,900"], ["PP","Sippenwies","60,300","RF Köln"], ["AS","Dinslaken-Süd","62,500"], ["AK","Oberhausen","65,600"], ["AS","Oberhausen-Holten","68,900"], ["AK","Oberhausen-West","72,000"], ["AS","Oberhausen-Lirich","73,300"]], "A42": [["AS","Duisburg-Beeck","10,500","Ausf. RF Dort./ Zuf. RF Kamp-L."], ["AS","Duisburg-Beeck","11,800","Zuf. RF Dort./ Ausf. RF Kamp-L."], ["AK","Duisburg-Nord","14,400"], ["AS","Duisburg-Neumühl","16,100"], ["AK","Oberhausen-West","17,600"], ["AS","Oberhausen-Buschhausen","19,500"], ["AS","Oberhausen-Zentrum","21,500"], ["AS","Oberhausen-Neue Mitte","23,300"], ["AS","Bottrop-Süd","26,600"], ["AK","Essen-Nord","31,100"], ["AS","Essen-Altenessen","32,400"]], "A59": [["AS","Dinslaken-West (Ausbauende)","1,300"], ["AS","Dinslaken-Hiesfeld","2,700"], ["AS","Duisburg-Walsum","4,300"], ["AS","Duisburg-Fahrn","6,200"], ["AS","Duisburg-Marxloh","7,200","Ausf. RF D’dorf./ Zuf. RF Dins."], ["AS","Duisburg-Marxloh","7,600","Ausf. RF Dins./ Zuf. RF D’dorf."], ["AS","Duisburg-Althamborn","9,100"], ["AK","Duisburg-Nord","9,400"], ["AS","Duisburg-Meiderich","11,000"], ["AS","Duisburg-Ruhrort","11,800"]], "A516": [["AK","Oberhausen","0,000"], ["AS","Oberhausen-Sterkrade","2,500","(3,2 km)"], ["AS","Oberhausen-Eisenheim","4,900"], ["AS","Oberhausen-Zentrum","5,100"]]}, richtungen: {"A2": ["RF Dortmund (+)","RF Oberhausen (-)"], "A3": ["RF Köln (+)","RF Arnheim (-)"], "A42": ["RF Dortmund (+)","RF Kamp-Lintfort (-)"], "A59": ["RF Köln (+)","RF Dinslaken (-)"], "A516": ["RF Zentrum (+)","RF AK Oberhausen (-)"]} },
+    "Moers": { grenzen: {"A40": [0.000, 41.999], "A42": [0.000, 9.499], "A44": [78.000, 84.113], "A57": [0.000, 73.999], "A59": [13.000, 22.499]}, listen: {"A40": [["GÜ","Grenzübergang Straelen","0,000"], ["AS","Niederdorf","1,900"], ["AS","Straelen","3,900"], ["AS","Wankum","6,300"], ["PP","Tomm Heide","7,300","RF Dortmund"], ["PP","Tomm Heide","7,600","RF Venlo"], ["AS","Wachtendonk","10,900"], ["AS","Kempen","14,900"], ["AS","Kerken","19,100"], ["PP","Neufelder Heide-Nord","21,000","RF Venlo"], ["PP","Neufelder Heide-Süd","21,000","RF Dortmund"], ["AS","Neukirchen-Vluyn","24,400"], ["AK","Moers","28,400"], ["AS","Moers","28,800"], ["AS","Moers-Zentrum","31,200"], ["AS","Duisburg-Rheinhausen","33,200"], ["AS","Duisburg-Homberg","35,700"], ["AS","Duisburg-Häfen (Neuenkamp)","37,800","RF Essen"], ["AS","Duisburg-Häfen (Marientor)","38,700"], ["AK","Duisburg","41,100"]], "A42": [["AK","Kamp-Lintfort","0,000"], ["AS","Moers-Nord","4,000"], ["AS","Duisburg-Baerl","7,000"], ["AS","Duisburg-Beeckerwerth","9,400"]], "A44": [["PP","Hoxhöfe-Nord","79,200","RF Aachen"], ["PP","Hoxhöfe-Süd","79,200","RF Kassel"], ["AS","Osterath","80,900"], ["AK","Meerbusch","83,000"]], "A57": [["GÜ","Grenzübergang Goch","0,000"], ["AS","Kleve","5,900"], ["AS","Goch","10,600"], ["TuR","Kalbecker Forst","11,900","RF Goch / RF Köln"], ["AS","Uedem","18,600"], ["AS","Sonsbeck","24,200"], ["PP","Hamb","29,400","RF Köln"], ["PP","Bönninghardt","32,000","RF Goch"], ["AS","Alpen","34,900"], ["PP","Leucht","37,700","RF Goch / RF Köln"], ["AS","Rheinberg","42,600"], ["AS","Asdonkshof","44,500"], ["AS","Kamp-Lintfort","46,300"], ["AK","Kamp-Lintfort","47,300"], ["PP","Dong","49,000","RF Goch"], ["PP","Dong","49,500","RF Köln"], ["AS","Moers-Hülsdonk","50,900"], ["AK","Moers","53,600"], ["AS","Moers-Kapellen","57,900"], ["AS","Krefeld-Gartenstadt","61,400"], ["AS","Krefeld-Zentrum","64,500"], ["AS","Krefeld-Oppum","66,600"], ["RuT","Geismühle","67,800","RF Köln"], ["RuT","Geismühle","68,100","RF Goch"], ["AK","Meerbusch","70,300"], ["AS","Bovert","73,300"]], "A59": [["AK","Duisburg","13,900"], ["AS","Duisburg-Duissern","14,800"], ["AS","Duisburg-Zentrum","16,100"], ["AS","Duisburg-Hochfeld","17,200"], ["AS","Duisburg-Wanheimerort","18,400"], ["AS","Duisburg-Buchholz","20,900"], ["AS","Duisburg-Großenbaum","22,400"]]}, richtungen: {"A40": ["RF Dortmund (+)","RF Venlo (-)"], "A42": ["RF Dortmund (+)","RF Kamp-Lintfort (-)"], "A44": ["RF Kassel (+)","RF Mönchengladbach (-)"], "A57": ["RF Köln (+)","RF Goch (-)"], "A59": ["RF Köln (+)","RF Dinslaken (-)"]} },
+    "Gladbach": { grenzen: {"A44": [48.851, 77.999], "A46": [18.284, 65.294], "A52": [-0.468, 46.665], "A57": [74.000, 88.499], "A61": [-1.274, 36.465]}, listen: {"A44": [["AK","Holz","54,000"], ["AS","M'gladbach-Odenkirchen","62,200","Ausbauende"], ["AS","M'gladbach-Ost","66,900","Ausbauende"], ["AK","Neersen","69,200"], ["AS","Neersen","70,500"], ["AS","Münchheide","72,800"], ["AS","Krefeld-Forstwald","75,100"], ["AS","Krefeld-Fichtenhain","77,200"]], "A46": [["AS","Heinsberg (Ausbauende)","18,300"], ["AS","Dremmen","22,900"], ["AS","Hückelhoven-West","25,500"], ["AS","Hückelhoven-Ost","28,800"], ["AS","Erkelenz-Süd","33,600"], ["AS","Erkelenz-Ost","37,100"], ["PP","Herrather Linde-Nord","39,200","RF Heinsberg"], ["PP","Herrather Linde-Süd","39,200","RF Brilon"], ["AK","Wanlo","44,400"], ["AK","Holz","48,300"], ["AS","Jüchen","52,600"], ["AS","Grevenbroich","54,700"], ["RuT","Vierwinden-Süd","58,100","RF Brilon"], ["RuT","Vierwinden-Nord","58,600","RF Heinsberg"], ["AS","Grevenbroich-Kapellen","60,000"], ["AS","Neuss-Holzheim","63,600"]], "A52": [["AS","Elmpt","4,100"], ["AS","Niederkrüchten","10,000"], ["AS","Schwalmtal-Waldniel","13,400"], ["AS","Schwalmtal-Hostert","17,700"], ["AS","Mönchengladbach-Hardt","19,900"], ["AK","Mönchengladbach","22,200"], ["PP","Bockerter Heide","24,200","RF Roermond"], ["PP","Wolfskull","24,200","RF AK Marl-Nord"], ["AS","Mönchengladbach-Nord","26,600"], ["AS","Mönchengladbach-Neuwerk","28,200"], ["AK","Neersen","30,700"], ["RuT","Cloerbruch-Nord","32,600","RF Roermond"], ["RuT","Cloerbruch-Süd","32,600","RF AK Marl-Nord"], ["AS","Schiefbahn","34,500"], ["AS","Kaarst-Nord","40,300"], ["AK","Kaarst","41,700"], ["AS","Büderich","46,400"]], "A57": [["AK","Kaarst","76,900"], ["AS","Holzbüttgen","78,700"], ["PP","Morgensternsheide-Ost","79,800","RF Nijmegen"], ["PP","Morgensternsheide-West","80,000","RF Köln"], ["AS","Büttgen","81,200"], ["AK","Neuss-West","83,300"], ["AS","Neuss-Reuschenberg","84,300"], ["AS","Neuss-Hafen","86,000"], ["AS","Neuss-Norf","88,000"]], "A61": [["GÜ","Grenzübergang Grenzwald","-1,300"], ["AS","Nettetal-West","0,600"], ["AS","Kaldenkirchen","1,900"], ["AS","Kaldenkirchen-Süd","4,100"], ["AS","Breyell","7,300","nur Ausfahrt RF Hockenheim"], ["AS","Nettetal","9,000"], ["AS","Süchteln","14,400"], ["AS","Viersen","16,800"], ["AS","Mackenstein","18,800"], ["AK","Mönchengladbach","22,000"], ["AS","Mönchengladbach-Nordpark","23,900"], ["AS","Mönchengladbach-Holt","26,300"], ["AS","Mönchengladbach-Rheydt","29,100"], ["AS","Mönchengladbach-Wickrath","31,000"], ["AS","Güdderath","33,600"], ["AK","Wanlo","35,300"], ["AS","Wanlo","36,400"]]}, richtungen: {"A44": ["RF Kassel (+)","RF Mönchengladbach (-)"], "A46": ["RF Wuppertal (+)","RF Heinsberg (-)"], "A52": ["RF Essen (+)","RF Roermond (-)"], "A57": ["RF Köln (+)","RF Goch (-)"], "A61": ["RF Koblenz (+)","RF Venlo (-)"]} }
 };
 
-let datenLand = [], datenBAB = [], referenzPunkte = [], datenGemeinden = [];
-let karte = null;
-let kartenMarker = null;
-let gpsBeobachterId = null;
+const meistereien = {
+    A1: [{from:363.315,to:365.649,name:"AM Hagen",address:"In d. Krone 20, 58099 Hagen"},{from:365.649,to:381.646,name:"AM Remscheid",address:"Talsperre 23, 42859 Remscheid"}],
+    A3: [{from:101.2,to:107.925,name:"AM Ratingen",address:"Brachter Str. 45A, 40882 Ratingen"},{from:107.925,to:122.819,name:"AM Leverkusen",address:"Bonner Str. 71, 51379 Leverkusen"}],
+    A44: [{from:1.215,to:17.599,name:"AM Ratingen",address:"Brachter Str. 45A, 40882 Ratingen"}],
+    A46: [{from:70.815,to:80.770,name:"AM Kaarst",address:"Neersener Str. 9, 41564 Kaarst"},{from:80.770,to:88.340,name:"AM Leverkusen",address:"Bonner Str. 71, 51379 Leverkusen"},{from:88.340,to:114.763,name:"AM Remscheid",address:"Talsperre 23, 42859 Remscheid"}],
+    A57: [{from:88.5,to:93.343,name:"AM Kaarst",address:"Neersener Str. 9, 41564 Kaarst"},{from:93.343,to:100.912,name:"AM Köln",address:"Dürener Str. 462, 50858 Köln"}],
+    A59: [{from:0.578,to:14.467,name:"AM Leverkusen",address:"Bonner Str. 71, 51379 Leverkusen"}],
+    A535: [{from:0.262,to:12.811,name:"AM Remscheid",address:"Talsperre 23, 42859 Remscheid"}],
+    A542: [{from:4.055,to:8.754,name:"AM Leverkusen",address:"Bonner Str. 71, 51379 Leverkusen"}]
+};
 
-// --- SERVICE WORKER REGISTRIEREN ---
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Fehler:', err));
-    });
+// Variablen
+let aktuelleWache = "Hilden"; 
+let datenLand=[], datenBAB=[], referenzPunkte=[], datenGemeinden=[];
+let letzteLat = 0, letzteLon = 0, letzteAcc = 0; 
+let bkmHistorie = []; 
+let manuellerFokus = null;
+let map = null;
+
+// Weg-Zeit Variablen
+let wzInterval = null;
+let wzStartTime = 0;
+let wzStartKm = 0;
+let wzSpeed = 0;
+let wzDir = 1;
+
+if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute("data-theme", "dark");
 }
 
-// --- INITIALISIERUNG ---
-document.addEventListener("DOMContentLoaded", initialisiereApp);
-
-function initialisiereApp() {
-    bindeEreignisse();
-    ladeDaten();
-    ladeStandardWache();
-    wechsleWache(zustand.aktuelleWache);
+function toggleTheme() {
+    const doc = document.documentElement;
+    if (doc.getAttribute("data-theme") === "dark") doc.setAttribute("data-theme", "light"); 
+    else doc.setAttribute("data-theme", "dark");
 }
 
-function bindeEreignisse() {
-    document.getElementById("btn-theme-switch").addEventListener("click", () => {
-        document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-    });
+function showPage(pageId) {
+    document.getElementById('page-main').style.display = 'none';
+    document.getElementById('page-wegzeit').style.display = 'none';
+    document.getElementById('page-impressum').style.display = 'none';
+    document.getElementById('page-hinweise').style.display = 'none';
+    document.getElementById('map-overlay').style.display = 'none';
     
-    document.getElementById("gpsBtn").addEventListener("click", wechsleGpsStatus);
+    document.getElementById(pageId).style.display = 'block';
     
-    document.getElementById("autobahn").addEventListener("change", (e) => {
-        zustand.aktuelleAutobahn = e.target.value;
-        aktualisiereTabelle();
-    });
-
-    document.getElementById("km").addEventListener("input", berechneWerteAusEingabe);
-    
-    document.querySelectorAll(".wache-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => wechsleWache(e.target.dataset.wache));
-    });
-
-    document.getElementById("saveWache").addEventListener("change", (e) => {
-        if(e.target.checked) localStorage.setItem('standardWache', zustand.aktuelleWache);
-        else localStorage.removeItem('standardWache');
-    });
-
-    // Navigation & Modals
-    document.getElementById("btn-oeffne-karte").addEventListener("click", oeffneKarte);
-    document.getElementById("btn-schliesse-karte").addEventListener("click", () => document.getElementById("map-overlay").style.display = "none");
-    document.getElementById("btn-berechne-karten-knoten").addEventListener("click", berechneKnotenAusKarte);
-
-    document.getElementById("btn-oeffne-wzt").addEventListener("click", () => wechsleSeite("page-wegzeit"));
-    document.getElementById("btn-schliesse-wzt").addEventListener("click", () => wechsleSeite("page-main"));
-    document.getElementById("btn-wzt-start").addEventListener("click", starteWegZeitTracker);
-    document.getElementById("btn-wzt-stop").addEventListener("click", stoppeWegZeitTracker);
-}
-
-function ladeStandardWache() {
-    const gespiechert = localStorage.getItem('standardWache');
-    if (gespiechert && datenWachen[gespiechert]) {
-        zustand.aktuelleWache = gespiechert;
-        document.getElementById("saveWache").checked = true;
+    if(pageId === 'page-main') {
+        document.getElementById('footer-nav').style.display = 'flex';
+    } else {
+        document.getElementById('footer-nav').style.display = 'none';
     }
 }
 
-function wechsleSeite(zielId) {
-    document.getElementById("page-main").style.display = zielId === "page-main" ? "block" : "none";
-    document.getElementById("page-wegzeit").style.display = zielId === "page-wegzeit" ? "block" : "none";
+// Daten laden
+Promise.all([
+    fetch('Abschnitt.json').then(res=>res.json()),
+    fetch('AbschnittBAB.json').then(res=>res.json()),
+    fetch('BABKM.json').then(res=>res.json()),
+    fetch('Gemeinden.json').then(res=>res.json())   
+]).then(([land, bab, punkte, gem])=>{
+    datenLand = extrahiere(land, true);
+    datenBAB = extrahiere(bab, true);
+    referenzPunkte = extrahiere(punkte, false);
+    datenGemeinden = extrahiereGemeinden(gem); 
+    document.getElementById("gps-info").innerHTML='<span style="color:green; font-weight:bold;">✅ Geo-Datenbank geladen</span>';
+    loadWacheSetting();
+}).catch(e => { 
+    document.getElementById("gps-info").innerHTML='<span style="color:red;">❌ Fehler beim Laden der Geo-Dateien.</span>';
+});
+
+function extrahiere(json, erwarteLinien){
+    let list=[]; if(!json||!json.features) return list;
+    json.features.forEach(f=>{
+        try { turf.flatten(f).features.forEach(sub=>{
+            if(erwarteLinien&&(!sub.geometry||!sub.geometry.type.includes('LineString'))) return;
+            list.push(sub);
+        }); } catch(e){}
+    });
+    return list;
 }
 
-// --- DATEN LADEN ---
-async function ladeDaten() {
-    try {
-        const [land, bab, punkte, gemeinden] = await Promise.all([
-            fetch('Abschnitt.json').then(res => res.json()),
-            fetch('AbschnittBAB.json').then(res => res.json()),
-            fetch('BABKM.json').then(res => res.json()),
-            fetch('Gemeinden.json').then(res => res.json())
-        ]);
-        
-        datenLand = extrahiereFeatures(land, 'LineString');
-        datenBAB = extrahiereFeatures(bab, 'LineString');
-        referenzPunkte = extrahiereFeatures(punkte, 'Point');
-        datenGemeinden = extrahiereFeatures(gemeinden, 'Polygon');
-        
-        document.getElementById("gps-info").innerHTML = '✅ Geo-Datenbank geladen';
-    } catch (fehler) {
-        document.getElementById("gps-info").innerHTML = '❌ Fehler beim Laden der Geo-Dateien.';
+function extrahiereGemeinden(json) {
+    let list = []; if(!json||!json.features) return list;
+    json.features.forEach(f => {
+        try { turf.flatten(f).features.forEach(sub => list.push(sub)); } catch(e){}
+    });
+    return list;
+}
+
+function saveWacheSetting() {
+    let isChecked = document.getElementById('saveWache').checked;
+    if (isChecked) localStorage.setItem('stdWache', aktuelleWache);
+    else localStorage.removeItem('stdWache');
+}
+
+function loadWacheSetting() {
+    let std = localStorage.getItem('stdWache');
+    if (std && datenWachen[std]) {
+        document.getElementById('saveWache').checked = true;
+        wechsleWache(std, false);
+    } else {
+        wechsleWache('Hilden', false);
     }
 }
 
-function extrahiereFeatures(json, type) {
-    if (!json || !Array.isArray(json.features)) return [];
-    return json.features.filter(f => f.geometry && f.geometry.type.includes(type));
-}
-
-// --- HAUPT-LOGIK ---
-function wechsleWache(wachenName) {
-    zustand.aktuelleWache = wachenName;
+function wechsleWache(wacheName, triggerEvent = false) {
+    aktuelleWache = wacheName;
     document.querySelectorAll('.wache-btn').forEach(btn => {
-        btn.classList.toggle('active-wache', btn.dataset.wache === wachenName);
+        if(btn.dataset.wache === wacheName) btn.classList.add('active-wache');
+        else btn.classList.remove('active-wache');
     });
 
-    const select = document.getElementById("autobahn");
-    select.innerHTML = "";
-    
-    const wachenDaten = datenWachen[wachenName];
-    if (wachenDaten && wachenDaten.grenzen) {
-        Object.keys(wachenDaten.grenzen).forEach(ab => select.appendChild(new Option(ab, ab)));
-        zustand.aktuelleAutobahn = select.value;
-    }
-    aktualisiereTabelle();
-}
+    let dropMain = document.getElementById("autobahn"); 
+    let dropWz = document.getElementById("wz_autobahn"); 
+    dropMain.innerHTML = ""; 
+    if(dropWz) dropWz.innerHTML = "";
 
-function berechneWerteAusEingabe() {
-    const kmWert = parseFloat(document.getElementById("km").value.replace(',', '.'));
-    zustand.aktuellerKilometer = isNaN(kmWert) ? NaN : kmWert;
-    pruefeZustaendigkeit(zustand.aktuelleAutobahn, zustand.aktuellerKilometer);
-    aktualisiereTabelle();
-}
-
-// --- GPS LOGIK ---
-function wechsleGpsStatus() {
-    const btn = document.getElementById("gpsBtn");
-    const info = document.getElementById("gps-info");
-
-    if (zustand.gpsAktiv) {
-        navigator.geolocation.clearWatch(gpsBeobachterId);
-        zustand.gpsAktiv = false;
-        btn.textContent = "📡 GPS Live-Erfassung starten";
-        btn.classList.remove("active");
-        info.textContent = "GPS pausiert.";
+    let autobahnen = Object.keys(datenWachen[aktuelleWache].grenzen || {});
+    if(autobahnen.length === 0) {
+        dropMain.add(new Option("Keine Daten", ""));
+        if(dropWz) dropWz.add(new Option("Keine Daten", ""));
     } else {
-        zustand.gpsAktiv = true;
-        btn.textContent = "⏹️ GPS stoppen";
-        btn.classList.add("active");
-        info.textContent = "⏳ Suche Signal...";
+        autobahnen.forEach(a => { 
+            dropMain.add(new Option(a, a)); 
+            if(dropWz) dropWz.add(new Option(a, a)); 
+        });
+    }
+    
+    if (document.getElementById('saveWache').checked) {
+        localStorage.setItem('stdWache', wacheName);
+    }
 
-        gpsBeobachterId = navigator.geolocation.watchPosition(pos => {
-            // Debouncing: Max alle 2.5 Sekunden auswerten
-            if (Date.now() - zustand.letzteGpsZeit > 2500) {
-                zustand.letzteGpsZeit = Date.now();
-                verarbeiteGpsSignal(pos.coords.latitude, pos.coords.longitude);
+    if (triggerEvent && window.goatcounter) {
+        window.goatcounter.count({path: 'wache-' + wacheName, title: 'Wache: ' + wacheName, event: true});
+    }
+
+    manuellerFokus = null;
+    updateUI();
+    updateRichtung();
+    berechnen(true);
+    
+    if(typeof updateWzUI === 'function') updateWzUI(); 
+}
+
+function holeKoordinateFuerKM(autobahn, km) {
+    if (referenzPunkte.length === 0 || isNaN(km)) return null;
+    let suchName = autobahn.toUpperCase().replace(/\s/g, ''); let numOnly = autobahn.replace('A', ''); 
+    let passende = referenzPunkte.filter(f => {
+        if(!f.properties) return false;
+        let refBez = String(f.properties.Bez || f.properties.STRBEZ || "").toUpperCase().replace(/\s/g, '');
+        let strKl = String(f.properties.STRKL || "").toUpperCase();
+        if(strKl === "B" || strKl === "L" || strKl === "K") return false; 
+        return refBez === suchName || refBez === "BAB" + numOnly || refBez === numOnly || refBez === "A" + numOnly;
+    });
+
+    if(passende.length > 0) {
+        let candidates = [];
+        passende.forEach(p => {
+            let kmProp = p.properties.Kilometer || p.properties.KM_WERT || p.properties.STATION || p.properties.KM || 0;
+            let pKm = parseFloat(String(kmProp).replace(',', '.'));
+            if(!isNaN(pKm)) candidates.push({ pt: p, diff: Math.abs(pKm - km) });
+        });
+        if (candidates.length > 0) {
+            candidates.sort((a, b) => a.diff - b.diff);
+            return turf.getCoord(turf.centroid(candidates[0].pt)); 
+        }
+    }
+    return null;
+}
+
+function updateUI() {
+    let a = document.getElementById("autobahn").value;
+    let wachenGrenzen = datenWachen[aktuelleWache].grenzen;
+    let wachenRichtungen = datenWachen[aktuelleWache].richtungen;
+    let wachenListen = datenWachen[aktuelleWache].listen || {};
+    
+    let leftArrow = document.getElementById("dir-plus");
+    let rightArrow = document.getElementById("dir-minus");
+    let tbody = document.getElementById("liste");
+    tbody.innerHTML = "";
+
+    if(!wachenGrenzen[a]) {
+        document.getElementById("b").innerText = "-";
+        leftArrow.style.display = "none"; rightArrow.style.display = "none";
+        return;
+    }
+
+    document.getElementById("b").innerText = wachenGrenzen[a][0].toFixed(3).replace('.',',') + " - " + wachenGrenzen[a][1].toFixed(3).replace('.',',');
+
+    if(wachenRichtungen[a]) {
+        document.getElementById("dir-plus-text").innerText = wachenRichtungen[a][0] || "";
+        document.getElementById("dir-minus-text").innerText = wachenRichtungen[a][1] || "";
+        leftArrow.style.display = "flex"; rightArrow.style.display = "flex";
+    } else {
+        leftArrow.style.display = "none"; rightArrow.style.display = "none";
+    }
+
+    if(wachenListen[a]) {
+        wachenListen[a].forEach(e => {
+            let typ = e[0]; let name = e[1]; let kmRaw = e[2]; let rf = e[3]; 
+            let baseKm = parseFloat(kmRaw.split('-')[0].replace(',', '.'));
+            let nameHtml = name;
+
+            if (!isNaN(baseKm)) {
+                let coords = holeKoordinateFuerKM(a, baseKm);
+                if (coords) {
+                    let mapLink = `https://www.google.com/maps/search/?api=1&query=${coords[1]},${coords[0]}`;
+                    nameHtml = `<a href="${mapLink}" target="_blank">${name}</a>`;
+                } else {
+                    let searchQuery = encodeURIComponent(`${a} ${typ} ${name}`);
+                    let mapLink = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
+                    nameHtml = `<a href="${mapLink}" target="_blank">${name}</a>`;
+                }
             }
-        }, err => info.textContent = "❌ GPS-Fehler", { enableHighAccuracy: true });
+
+            if (rf) {
+                nameHtml += `<br><span style="font-size:0.85em; color:var(--text-secondary); font-weight:normal;">${rf}</span>`;
+            }
+
+            let tr = document.createElement("tr");
+            tr.innerHTML = `<td>${typ}</td><td>${nameHtml}</td><td>${kmRaw}</td>`;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>Keine Liste hinterlegt.</td></tr>";
     }
 }
 
-function verarbeiteGpsSignal(lat, lng) {
-    zustand.koordinaten = { lat, lng };
-    const punkt = turf.point([lng, lat]);
-    
-    // 1. Gemeinde bestimmen
-    document.getElementById("gemeinde").textContent = findeGemeinde(punkt);
+function updateRichtung(){
+    let a=document.getElementById("autobahn").value, sel=document.getElementById("richtung"); 
+    if(!sel) return;
+    sel.innerHTML="";
+    let richtungen = datenWachen[aktuelleWache].richtungen;
+    if(!richtungen[a]) return;
+    richtungen[a].forEach(r=>{ let opt=document.createElement("option"); opt.value=r; opt.textContent=r; sel.appendChild(opt); });
+}
 
-    // 2. Nächste Autobahn finden (Turf.js Logik)
-    let naechsteLinie = null;
-    let kuerzesterAbstand = Infinity;
-    let berechneterKm = NaN;
+function findeGemeindeFuerPunkt(pt) {
+    if (datenGemeinden.length === 0) return "-";
+    for (let f of datenGemeinden) {
+        try { 
+            if (turf.booleanPointInPolygon(pt, f)) return f.properties.GEN || f.properties.GN || f.properties.NAME || "Unbekannt"; 
+        } catch(e) {}
+    }
+    return "Außerhalb NRW";
+}
 
-    const alleLinien = [...datenBAB, ...datenLand];
-    
-    alleLinien.forEach(linie => {
-        const gesnappt = turf.nearestPointOnLine(linie, punkt);
-        const abstand = gesnappt.properties.dist; // Distanz in km
-        
-        if (abstand < kuerzesterAbstand && abstand < 0.2) { // Max 200 Meter Toleranz
-            kuerzesterAbstand = abstand;
-            naechsteLinie = linie;
+let watchId=null;
+function toggleGPS(){
+    const btn=document.getElementById("gpsBtn"), info=document.getElementById("gps-info");
+    if(watchId){
+        navigator.geolocation.clearWatch(watchId); watchId=null;
+        btn.innerHTML="📡 GPS Live-Erfassung starten"; btn.classList.remove("active");
+        info.innerHTML="GPS pausiert.";
+    } else {
+        if(!navigator.geolocation) return info.innerText="GPS nicht unterstützt";
+        btn.innerHTML="⏹️ GPS stoppen"; btn.classList.add("active"); info.innerHTML="⏳ Suche Signal...";
+        watchId = navigator.geolocation.watchPosition(pos => {
+            verarbeiteGPS(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+        }, err => { info.innerHTML = "❌ GPS-Fehler: " + err.message; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 27000 });
+    }
+}
+
+function findeKandidaten(liste, pt, filter, maxDist){
+    let hits = {};
+    liste.forEach(f=>{
+        try{ 
+            const props = f.properties || {};
+            const strKl = String(props.STRKL || "").toUpperCase();
+            const strNr = String(props.STRNR || "");
+            const name = (strKl + strNr).toUpperCase().replace(/\s/g,'');
             
-            // Kilometer berechnen (Interpolation Start-KM + Distanz auf der Linie)
-            const statAnf = parseFloat(linie.properties.STATANF || 0);
-            const distanzAufLinie = gesnappt.properties.location; 
-            berechneterKm = statAnf + distanzAufLinie;
+            if (filter) {
+                if (Array.isArray(filter) && !filter.includes(name)) return;
+                if (filter === "BUND" && strKl !== "B") return;
+                if (filter === "LAND" && (strKl === "A" || strKl === "B" || name.startsWith("A"))) return;
+            }
+
+            let d = turf.pointToLineDistance(pt, f); 
+            if (d <= maxDist) {
+                if (!hits[name] || d < hits[name].dist) {
+                    hits[name] = { feature: f, dist: d, name: name, props: props };
+                }
+            } 
+        } catch(e){}
+    });
+    return Object.values(hits).sort((a, b) => a.dist - b.dist);
+}
+
+async function verarbeiteGPS(lat, lon, acc){
+    letzteLat = lat; letzteLon = lon; letzteAcc = acc;
+    const pt = turf.point([lon, lat]);
+    
+    document.getElementById("g").innerText = findeGemeindeFuerPunkt(pt);
+    
+    let alleDaten = datenBAB.concat(datenLand);
+
+    let babHits = findeKandidaten(alleDaten, pt, null, 2.0).filter(k => k.name.startsWith("A"));
+    let bundHits = findeKandidaten(alleDaten, pt, "BUND", 2.0);
+    let landHits = findeKandidaten(alleDaten, pt, "LAND", 2.0);
+    
+    let alleKandidaten = [...babHits, ...bundHits, ...landHits];
+    let uniqueKandidaten = [];
+    let seenNames = new Set();
+    alleKandidaten.forEach(k => {
+        if (!seenNames.has(k.name)) {
+            seenNames.add(k.name);
+            uniqueKandidaten.push(k);
         }
     });
 
-    if (naechsteLinie) {
-        const strName = (naechsteLinie.properties.STRKL || "") + (naechsteLinie.properties.STRNR || "");
-        document.getElementById("autobahn").value = strName;
-        zustand.aktuelleAutobahn = strName;
-        zustand.aktuellerKilometer = parseFloat(berechneterKm.toFixed(3));
-        document.getElementById("km").value = zustand.aktuellerKilometer;
+    if(uniqueKandidaten.length > 0) {
+        let sortKandidaten = [...uniqueKandidaten];
+        sortKandidaten.sort((a, b) => {
+            let aIsA = a.name.startsWith("A");
+            let bIsA = b.name.startsWith("A");
+            if (aIsA && !bIsA) return -1;
+            if (!aIsA && bIsA) return 1;
+            return a.dist - b.dist;
+        });
+
+        let sel = null;
+        if (manuellerFokus) {
+            let focusMatch = sortKandidaten.find(k => k.name === manuellerFokus);
+            if (focusMatch) sel = focusMatch; 
+        }
+        if (!sel) sel = sortKandidaten[0];
+
+        const props = sel.feature.properties || {};
+        const strName = sel.name; 
+        let htmlOutput = "";
         
-        document.getElementById("gps-info").innerHTML = `📍 GPS: ${strName} - KM ${zustand.aktuellerKilometer}`;
-        pruefeZustaendigkeit(strName, zustand.aktuellerKilometer);
-        aktualisiereTabelle();
-        verarbeiteWegZeit(zustand.aktuellerKilometer);
+        let accStr = `±${Math.round(acc)}m`;
+        let snapDistStr = `${Math.round(sel.dist * 1000)}m`;
+        let techInfo = `<div style="margin-top:6px; font-size:0.85em; color:var(--text-secondary);">Genauigkeit: <b>${accStr}</b> | Abstand zur Achse: <b>${snapDistStr}</b></div>`;
+
+        if (strName.startsWith("A")) {
+            let needsSwitch = true;
+            let currentGrenzen = datenWachen[aktuelleWache].grenzen[strName];
+            let bkm = berechneGoldgriffBKM(pt, strName);
+            
+            if (currentGrenzen && bkm >= Math.min(...currentGrenzen) && bkm <= Math.max(...currentGrenzen)) {
+                needsSwitch = false; 
+            }
+            
+            if (needsSwitch) {
+                for (let wache in datenWachen) {
+                    let g = datenWachen[wache].grenzen[strName];
+                    if (g && bkm >= Math.min(...g) && bkm <= Math.max(...g)) {
+                        wechsleWache(wache, true);
+                        if(Array.from(document.getElementById("autobahn").options).some(o=>o.value===strName)) {
+                            document.getElementById("autobahn").value = strName;
+                        }
+                        updateUI();
+                        updateRichtung();
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(Array.from(document.getElementById("autobahn").options).some(o=>o.value===strName)){
+            let bkm = berechneGoldgriffBKM(pt, strName);
+            document.getElementById("km").value = bkm > 0 ? bkm.toFixed(3).replace('.',',') : "";
+            if (document.getElementById("autobahn").value !== strName) {
+                document.getElementById("autobahn").value = strName;
+                updateUI();
+                updateRichtung();
+            }
+            manuellerFokus = strName; 
+            berechnen(false);
+
+            let dirText = "";
+            let rfListe = datenWachen[aktuelleWache].richtungen[strName]; 
+            if(bkm > 0) {
+                bkmHistorie.push(bkm);
+                if(bkmHistorie.length > 5) bkmHistorie.shift();
+                if(bkmHistorie.length >= 3) {
+                    let delta = bkmHistorie[bkmHistorie.length-1] - bkmHistorie[0];
+                    if(delta > 0.03) dirText = rfListe ? rfListe[0] : "(+)";
+                    else if(delta < -0.03) dirText = rfListe ? rfListe[1] : "(-)";
+                }
+            }
+
+            let bkmAnzeige = bkm > 0 ? bkm.toFixed(3) : "-";
+            if(dirText) bkmAnzeige += ` | <strong>${dirText}</strong>`;
+            
+            htmlOutput = `<span style="color:green;font-weight:bold;">✅ ${strName}</span> | KM: ${bkmAnzeige} ${techInfo}`;
+
+        } else {
+            let abschnitt = props.ABSNR || "Unbekannt";
+            let ast = props.ABSAST && props.ABSAST !== "" ? ` (${props.ABSAST})` : "";
+            let snapped = turf.nearestPointOnLine(sel.feature, pt);
+            let aktuellerKM = (parseFloat(props.STATANF) || 0) + (snapped.properties.location || 0);
+            let icon = (props.STRKL === "B" || props.STRKL === "b") ? "🚙" : "🌲";
+            
+            htmlOutput = `<span style="color:orange;font-weight:bold;">${icon} ${strName} erkannt</span><br><small>Abschnitt: <b>${abschnitt}${ast}</b> | KM: <b>${aktuellerKM.toFixed(3)}</b></small> ${techInfo}`;
+            
+            document.getElementById("km").value = "";
+            document.getElementById("b").innerText="-";
+            document.getElementById("m").innerText="-"; document.getElementById("m_address").innerText="-";
+            document.getElementById("progress").style.width="0%"; 
+            document.getElementById("liste").innerHTML="";
+        }
+
+        let andereImKreuz = sortKandidaten.filter(k => k.name !== sel.name && k.dist <= 0.8);
+        if (andereImKreuz.length > 0) {
+            htmlOutput += `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--input-border); text-align: left;">`;
+            htmlOutput += `<span style="font-size:0.8em; color:var(--text-secondary);">📍 Mehrere Straßen im Umkreis. Wechsle zu:</span><br>`;
+            
+            andereImKreuz.forEach(k => {
+                let btnText = "";
+                let distMeter = Math.round(k.dist * 1000);
+                if (Array.from(document.getElementById("autobahn").options).some(o=>o.value===k.name)) {
+                    let k_bkm = berechneGoldgriffBKM(pt, k.name);
+                    btnText = `🛣️ ${k.name} (KM ${k_bkm.toFixed(1)}) [${distMeter}m]`;
+                } else {
+                    let k_icon = (k.props.STRKL === "B" || k.props.STRKL === "b") ? "🚙" : "🌲";
+                    btnText = `${k_icon} ${k.name} [${distMeter}m]`;
+                }
+                htmlOutput += `<button type="button" onclick="wechsleFokus('${k.name}')" style="margin: 4px 4px 0 0; padding: 6px 12px; width: auto; font-size: 0.85em; background: transparent; color: var(--text-main); border: 1px solid var(--accent); border-radius: 6px;">${btnText}</button>`;
+            });
+            htmlOutput += `</div>`;
+        }
+        document.getElementById("gps-info").innerHTML = htmlOutput;
+
     } else {
-        document.getElementById("gps-info").innerHTML = `Keine Autobahn in der Nähe gefunden.`;
+        document.getElementById("gps-info").innerHTML = `❓ Keine Straße im Umkreis gefunden.`;
     }
 }
 
-function findeGemeinde(punkt) {
-    for (let g of datenGemeinden) {
-        if (turf.booleanPointInPolygon(punkt, g)) {
-            return g.properties.GN || g.properties.GEN || "Unbekannt";
+function wechsleFokus(zielName) {
+    manuellerFokus = zielName;
+    let drop = document.getElementById("autobahn");
+    if (Array.from(drop.options).some(o => o.value === zielName)) {
+        drop.value = zielName;
+        updateUI();      
+        updateRichtung();  
+        berechnen(true);       
+    }
+    if (letzteLat !== 0) {
+        verarbeiteGPS(letzteLat, letzteLon, letzteAcc);
+    }
+}
+
+function berechneGoldgriffBKM(meinPunkt, strName){
+    if(referenzPunkte.length === 0) return 0;
+    let suchName=strName.toUpperCase().replace(/\s/g,'').replace('A','');
+    let passende=referenzPunkte.filter(f=>{
+        if(!f.properties||!f.properties.Bez) return false;
+        return String(f.properties.Bez).toUpperCase().replace(/\s/g,'').replace('A','')===suchName;
+    });
+    
+    if(passende.length > 1){
+        passende.forEach(p => p.tempDist = turf.distance(meinPunkt, p));
+        passende.sort((a, b) => a.tempDist - b.tempDist);
+        
+        let closest = passende[0];
+        let secondClosest = passende[1];
+        
+        let refKM1 = parseFloat(String(closest.properties.Kilometer || closest.properties.KM_WERT || closest.properties.STATION || closest.properties.KM || 0).replace(',','.'));
+        let refKM2 = parseFloat(String(secondClosest.properties.Kilometer || secondClosest.properties.KM_WERT || secondClosest.properties.STATION || secondClosest.properties.KM || 0).replace(',','.'));
+        
+        if (refKM2 < refKM1) return refKM1 - closest.tempDist;
+        else return refKM1 + closest.tempDist;
+        
+    } else if (passende.length === 1) {
+        let closest = passende[0];
+        let refKM = parseFloat(String(closest.properties.Kilometer || closest.properties.KM_WERT || closest.properties.STATION || closest.properties.KM || 0).replace(',','.'));
+        let dist = turf.distance(meinPunkt, closest);
+        return refKM + dist;
+    }
+    return 0;
+}
+
+function berechnen(isManual = false){
+    let kmRaw = document.getElementById("km").value.replace(',','.');
+    let km = parseFloat(kmRaw);
+    let drop = document.getElementById("autobahn");
+    let a = drop.value;
+    
+    if(isNaN(km)) return;
+
+    if(isManual) {
+        let currentGrenzen = datenWachen[aktuelleWache].grenzen[a];
+        if (currentGrenzen) {
+            let minKm = Math.min(...currentGrenzen);
+            let maxKm = Math.max(...currentGrenzen);
+            
+            if (km < minKm || km > maxKm) {
+                for (let wache in datenWachen) {
+                    let g = datenWachen[wache].grenzen[a];
+                    if (g && km >= Math.min(...g) && km <= Math.max(...g)) {
+                        wechsleWache(wache, true);
+                        drop = document.getElementById("autobahn");
+                        drop.value = a;
+                        updateUI();
+                        updateRichtung();
+                        break;
+                    }
+                }
+            }
+        }
+
+        let coords = holeKoordinateFuerKM(a, km);
+        if(coords) {
+            let pt = turf.point([coords[0], coords[1]]);
+            document.getElementById("g").innerText = findeGemeindeFuerPunkt(pt);
+        } else {
+            document.getElementById("g").innerText = "-";
         }
     }
-    return "-";
+
+    let wachenGrenzen = datenWachen[aktuelleWache].grenzen;
+    if(wachenGrenzen[a]) {
+        let percent = ((km - wachenGrenzen[a][0]) / (wachenGrenzen[a][1] - wachenGrenzen[a][0])) * 100;
+        document.getElementById("progress").style.width = Math.max(0, Math.min(100, percent)) + "%";
+    }
+
+    let meister="-", addr="-";
+    if(meistereien[a]){
+        meistereien[a].forEach(mf=>{
+            if(km >= mf.from && km <= mf.to){
+                meister = mf.name; addr = mf.address;
+            }
+        });
+    }
+    document.getElementById("m").innerText = meister;
+    document.getElementById("m_address").innerText = addr;
 }
 
-function pruefeZustaendigkeit(autobahn, km) {
-    const wachenDaten = datenWachen[zustand.aktuelleWache];
-    const abschnitt = document.getElementById("bereich");
-    const meistereiElement = document.getElementById("meisterei");
+function holeNKHtml(props, distMeter = 0, isMap = false) {
+    let vnk = props.VNK || props.Vnk || props.NETZKNOTEN_VON || "-";
+    let vb = props.VB || props.Vb || props.KNOTEN_VON_BUCHSTABE || "-";
+    let bnk = props.BNK || props.Bnk || props.NETZKNOTEN_NACH || "-";
+    let bb = props.BB || props.Bb || props.KNOTEN_NACH_BUCHSTABE || "-";
     
-    if (!wachenDaten || !wachenDaten.grenzen[autobahn] || isNaN(km)) {
-        abschnitt.textContent = "Keine Daten / Außerhalb";
-        abschnitt.style.color = "red";
+    let rawAbs = props.ABSNr || props.ABSNR || props.ABS || props.ABS_NUMMER || "";
+    if ((vnk === "-" || bnk === "-") && rawAbs.length >= 15) {
+        let absStr = String(rawAbs).padEnd(16, ' ');
+        vnk = absStr.substring(0, 7).trim() || "-";
+        vb = absStr.substring(7, 8).trim() || "-";
+        bnk = absStr.substring(8, 15).trim() || "-";
+        bb = absStr.substring(15, 16).trim() || "-";
+    }
+
+    let stationBase = parseFloat(String(props.STATANF || props.StatAnf || props.STATION || "0").replace(',', '.'));
+    let stationKM = (stationBase + distMeter) / 1000;
+
+    let debugInfo = "";
+    if (isMap) debugInfo = `<div style="font-size:0.8em; color:var(--text-secondary); margin-bottom:5px;">Snapping auf Abschnitt: <b>${rawAbs || "Unbekannt"}</b></div>`;
+
+    return `
+        ${debugInfo}
+        <table style="width:100%; border:none; margin:0; font-family:monospace; font-size:1em;">
+            <tr><td style="border:none; padding:3px 0;">von Netzknoten A:</td><td style="border:none; padding:3px 0; text-align:right;"><b>${vnk}</b></td></tr>
+            <tr><td style="border:none; padding:3px 0; color:var(--text-secondary);">Buchstabe:</td><td style="border:none; padding:3px 0; text-align:right; color:var(--text-secondary);"><b>${vb}</b></td></tr>
+            <tr><td style="border:none; padding:3px 0; border-top: 1px dashed var(--input-border);">nach B:</td><td style="border:none; padding:3px 0; text-align:right; border-top: 1px dashed var(--input-border);"><b>${bnk}</b></td></tr>
+            <tr><td style="border:none; padding:3px 0; color:var(--text-secondary);">Buchstabe:</td><td style="border:none; padding:3px 0; text-align:right; color:var(--text-secondary);"><b>${bb}</b></td></tr>
+            <tr><td style="border:none; padding:3px 0; border-top: 1px dashed var(--input-border);">Station (km):</td><td style="border:none; padding:3px 0; text-align:right; border-top: 1px dashed var(--input-border);"><b>${stationKM.toFixed(3).replace('.',',')}</b></td></tr>
+        </table>
+    `;
+}
+
+function openMap() {
+    document.getElementById('map-overlay').style.display = 'flex';
+    document.getElementById('nk-map-result').style.display = 'none';
+    
+    let initLat = letzteLat !== 0 ? letzteLat : 51.3;
+    let initLon = letzteLon !== 0 ? letzteLon : 6.85;
+
+    if (!map) {
+        map = L.map('karte', { zoomControl: false }).setView([initLat, initLon], 18);
+        
+        let osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxNativeZoom: 19, maxZoom: 22 });
+        let satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 19, maxZoom: 22 });
+        
+        osmLayer.addTo(map);
+        L.control.layers({ "Standard Karte": osmLayer, "Satellit": satLayer }).addTo(map);
+    } else {
+        map.setView([initLat, initLon], 18);
+    }
+    setTimeout(() => map.invalidateSize(), 200); 
+
+    if(letzteLat === 0 && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+        }, ()=>{}, {timeout: 5000});
+    }
+}
+
+function closeMap() { document.getElementById('map-overlay').style.display = 'none'; }
+
+function calculateNKMap() {
+    let pos = map.getCenter(); 
+    let pt = turf.point([pos.lng, pos.lat]);
+    
+    let alleDaten = datenBAB.concat(datenLand);
+    let best = null, minDist = Infinity;
+
+    alleDaten.forEach(f => {
+        try {
+            let d = turf.pointToLineDistance(pt, f);
+            if (d < minDist && d < 0.15) { minDist = d; best = f; }
+        } catch(e) {}
+    });
+
+    let resDiv = document.getElementById('nk-map-result');
+    if(best) {
+        let props = best.properties || {};
+        let strKl = String(props.STRKL || props.StrKl || "").toUpperCase();
+        let strName = props.STRBEZ || props.StrBez || (strKl + (props.STRNR || props.StrNr || ""));
+        
+        let snapped = turf.nearestPointOnLine(best, pt, {units: 'meters'});
+        let distAufLinieMeter = snapped.properties.location || 0;
+        
+        let snappedCoord = turf.getCoord(snapped);
+        map.setView([snappedCoord[1], snappedCoord[0]], map.getZoom(), {animate: true});
+        
+        let htmlZettel = holeNKHtml(props, distAufLinieMeter, true); 
+        
+        resDiv.innerHTML = `<div class="nk-box" style="margin-top:0;">
+            <strong style="color:var(--text-secondary);">📍 ${strName} | Fang-Abstand: ${(minDist*1000).toFixed(0)}m</strong><br>
+            <hr style="border:0; border-top:1px dashed var(--input-border); margin:6px 0;">
+            ${htmlZettel}
+        </div>`;
+    } else {
+        resDiv.innerHTML = `<p style="color:red; margin:0;">Keine Straße im 150m Umkreis gefunden. Bitte näher zoomen!</p>`;
+    }
+    
+    resDiv.style.display = 'block';
+    setTimeout(() => { map.invalidateSize(); }, 50);
+}
+
+// --- WEG ZEIT RECHNER FUNKTIONEN ---
+function toggleSpeedMode() {
+    let mode = document.querySelector('input[name="speed_mode"]:checked').value;
+    if(mode === 'live') {
+        alert("Hinweis: Echte Google Maps Live-Verkehrsdaten erfordern eine kostenpflichtige API-Anbindung (Google Directions API). Dies kann clientseitig nicht verarbeitet werden. Die Funktion dient hier als Platzhalter und nutzt vorerst einen Schätzwert von 120 km/h.");
+        document.getElementById('speed').value = "120";
+        document.getElementById('speed').disabled = true;
+    } else {
+        document.getElementById('speed').value = "";
+        document.getElementById('speed').disabled = false;
+    }
+}
+
+function updateWzUI() {
+    let a = document.getElementById("wz_autobahn").value;
+    if(!a) return;
+    let wachenRichtungen = datenWachen[aktuelleWache].richtungen;
+    let wachenListen = datenWachen[aktuelleWache].listen || {};
+    
+    let sel = document.getElementById("wz_richtung");
+    sel.innerHTML = "";
+    if(wachenRichtungen[a]) {
+        wachenRichtungen[a].forEach(r => sel.add(new Option(r, r)));
+    }
+    
+    let tbody = document.getElementById("wz_liste");
+    tbody.innerHTML = "";
+    if(wachenListen[a]) {
+        wachenListen[a].forEach(e => {
+            let tr = document.createElement("tr");
+            tr.innerHTML = `<td>${e[0]}</td><td>${e[1]}</td><td>${e[2]}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+function startWegZeit() {
+    wzStartKm = parseFloat(document.getElementById("start_km").value.replace(',','.'));
+    wzSpeed = parseFloat(document.getElementById("speed").value);
+    let dirStr = document.getElementById("wz_richtung").value;
+    
+    if(isNaN(wzStartKm) || isNaN(wzSpeed)) {
+        alert("Bitte Start-KM und Geschwindigkeit korrekt eingeben.");
         return;
     }
-
-    const [start, ende] = wachenDaten.grenzen[autobahn];
-    if (km >= start && km <= ende) {
-        abschnitt.textContent = "✅ Im Zuständigkeitsbereich";
-        abschnitt.style.color = "green";
-    } else {
-        abschnitt.textContent = "❌ Außerhalb des Bereichs";
-        abschnitt.style.color = "red";
-    }
-
-    // Meisterei bestimmen
-    if (meistereien[autobahn]) {
-        const am = meistereien[autobahn].find(m => km >= m.from && km <= m.to);
-        if (am) {
-            meistereiElement.textContent = am.name;
-            document.getElementById("meisterei_adresse").textContent = am.address;
-        }
-    }
-}
-
-function aktualisiereTabelle() {
-    const liste = document.getElementById("liste");
-    liste.innerHTML = "";
     
-    const wachenDaten = datenWachen[zustand.aktuelleWache];
-    if (!wachenDaten || !wachenDaten.listen[zustand.aktuelleAutobahn]) return;
-
-    const aufgaben = wachenDaten.listen[zustand.aktuelleAutobahn];
-    const kmStr = document.getElementById("km").value;
-    const aktuellerKm = kmStr ? parseFloat(kmStr.replace(',', '.')) : NaN;
-
-    aufgaben.forEach(punkt => {
-        const tr = document.createElement("tr");
-        const punktKm = parseFloat(punkt[2].replace(',', '.'));
-        
-        // Highlighten, wenn wir in der Nähe sind (± 1km)
-        if (!isNaN(aktuellerKm) && Math.abs(aktuellerKm - punktKm) <= 1.0) {
-            tr.classList.add("wz-highlight");
-        }
-
-        tr.innerHTML = `<td>${punkt[0]}</td><td>${punkt[1]}</td><td>${punkt[2]}</td>`;
-        liste.appendChild(tr);
-    });
-
-    // Pfeile setzen
-    if (wachenDaten.richtungen[zustand.aktuelleAutobahn]) {
-        document.getElementById("dir-plus").style.display = "flex";
-        document.getElementById("dir-minus").style.display = "flex";
-        document.getElementById("dir-plus-text").textContent = wachenDaten.richtungen[zustand.aktuelleAutobahn][0];
-        document.getElementById("dir-minus-text").textContent = wachenDaten.richtungen[zustand.aktuelleAutobahn][1];
-    }
+    wzDir = dirStr.includes("(+)") ? 1 : -1;
+    wzStartTime = Date.now();
+    
+    document.getElementById("btn_wz_start").style.display = "none";
+    document.getElementById("btn_wz_stop").style.display = "block";
+    document.getElementById("wz_result_box").style.display = "block";
+    
+    if(wzInterval) clearInterval(wzInterval);
+    wzInterval = setInterval(tickWegZeit, 1000);
+    tickWegZeit(); 
 }
 
-// --- LEAFLET KARTE ---
-function oeffneKarte() {
-    document.getElementById("map-overlay").style.display = "flex";
-    if (!karte) {
-        karte = L.map('karte').setView([51.2277, 6.7735], 13); // Startpunkt NRW
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(karte);
-    }
-    karte.invalidateSize();
+function stopWegZeit() {
+    if(wzInterval) clearInterval(wzInterval);
+    document.getElementById("btn_wz_start").style.display = "block";
+    document.getElementById("btn_wz_stop").style.display = "none";
 }
 
-function berechneKnotenAusKarte() {
-    const zentrum = karte.getCenter();
-    const punkt = turf.point([zentrum.lng, zentrum.lat]);
-    let naechsterKnoten = null;
-    let minAbstand = Infinity;
+function tickWegZeit() {
+    let elapsedMs = Date.now() - wzStartTime;
+    let elapsedHours = elapsedMs / (1000 * 60 * 60);
+    let elapsedMin = Math.floor(elapsedMs / (1000 * 60));
+    let elapsedSec = Math.floor((elapsedMs / 1000) % 60);
+    
+    let currentKm = wzStartKm + (wzDir * (wzSpeed * elapsedHours));
+    
+    document.getElementById("wz_aktuell_km").innerText = currentKm.toFixed(3).replace('.',',');
+    document.getElementById("wz_zeit").innerText = `${elapsedMin}:${elapsedSec.toString().padStart(2, '0')}`;
+    
+    highlightWzList(currentKm);
+}
 
-    referenzPunkte.forEach(p => {
-        const abstand = turf.distance(punkt, p);
-        if (abstand < minAbstand && abstand < 2) { // Suchradius 2km
-            minAbstand = abstand;
-            naechsterKnoten = p;
+function highlightWzList(currentKm) {
+    let rows = document.querySelectorAll("#wz_liste tr");
+    let closestRow = null;
+    let minDiff = Infinity;
+    
+    rows.forEach(row => {
+        row.classList.remove('wz-highlight');
+        let kmCell = row.cells[2].innerText;
+        let rowKm = parseFloat(kmCell.replace(',', '.'));
+        if(!isNaN(rowKm)) {
+            let diff = Math.abs(currentKm - rowKm);
+            if(diff < minDiff) {
+                minDiff = diff;
+                closestRow = row;
+            }
         }
     });
-
-    const resDiv = document.getElementById("nk-map-result");
-    resDiv.style.display = "block";
     
-    if (naechsterKnoten) {
-        const prop = naechsterKnoten.properties;
-        resDiv.innerHTML = `<div class="nk-box"><strong>Gefunden:</strong> ${prop.Bez || prop.STRNR} - KM ${prop.Kilometer}</div>`;
-        document.getElementById("km").value = prop.Kilometer;
-        berechneWerteAusEingabe();
-    } else {
-        resDiv.innerHTML = `<div class="nk-box" style="color:red;">Kein Netzknoten in direkter Nähe gefunden.</div>`;
-    }
-}
-
-// --- WEG-ZEIT TRACKER ---
-function starteWegZeitTracker() {
-    if (isNaN(zustand.aktuellerKilometer)) {
-        alert("Bitte warte auf ein GPS Signal oder gib manuell einen Kilometer ein.");
-        return;
-    }
-    zustand.wegZeit.aktiv = true;
-    zustand.wegZeit.startZeit = Date.now();
-    zustand.wegZeit.startKm = zustand.aktuellerKilometer;
-    zustand.wegZeit.messpunkte = [];
-    
-    document.getElementById("btn-wzt-start").style.display = "none";
-    document.getElementById("btn-wzt-stop").style.display = "block";
-    document.getElementById("wzt-status").textContent = "Aktiv 🟢";
-    document.getElementById("wzt-liste").innerHTML = "";
-}
-
-function stoppeWegZeitTracker() {
-    zustand.wegZeit.aktiv = false;
-    document.getElementById("btn-wzt-start").style.display = "block";
-    document.getElementById("btn-wzt-stop").style.display = "none";
-    document.getElementById("wzt-status").textContent = "Gestoppt 🔴";
-}
-
-function verarbeiteWegZeit(aktuellerKm) {
-    if (!zustand.wegZeit.aktiv) return;
-    
-    const jetzt = Date.now();
-    const diffStunden = (jetzt - zustand.wegZeit.startZeit) / 1000 / 3600;
-    const diffKm = Math.abs(aktuellerKm - zustand.wegZeit.startKm);
-    
-    if (diffStunden > 0) {
-        const geschwindigkeit = (diffKm / diffStunden).toFixed(1);
-        document.getElementById("wzt-speed").textContent = geschwindigkeit;
-        document.getElementById("wzt-km").textContent = aktuellerKm;
-
-        // Neuen Eintrag in der Tabelle erstellen
-        const tr = document.createElement("tr");
-        const zeitString = new Date(jetzt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        tr.innerHTML = `<td>${zeitString}</td><td>${aktuellerKm}</td><td>+ ${diffKm.toFixed(2)} km</td>`;
-        document.getElementById("wzt-liste").prepend(tr);
+    if(closestRow) {
+        closestRow.classList.add('wz-highlight');
     }
 }
